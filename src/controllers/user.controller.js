@@ -1,6 +1,6 @@
 import asyncHandler from '../utils/asyncHandler.js';
 import ApiError from '../utils/apiError.js';
-import { User } from '../models/user.model.js';
+import { User } from '../models/user.models.js';
 import uploadToCloudinary from '../utils/cloudinary.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 
@@ -31,20 +31,18 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'User already exists with this email, please login');
   }
 
-  const avatarLocalFile = req.files?.avatar?.[0].path;
-  const coverImageLocalFile = req.files?.coverImage?.[0].path;
+  const avatarLocalFile = req.files?.avatar[0]?.path;
+  const coverImageLocalFile = req.files?.coverImage[0]?.path;
 
   if (!avatarLocalFile) {
     throw new ApiError(400, 'Avatar image is required');
   }
 
-  const avatarUrl = await uploadToCloudinary(avatarLocalFile);
-  const coverImageUrl = coverImageLocalFile
-    ? await uploadToCloudinary(coverImageLocalFile)
-    : null;
+  const avatar = await uploadToCloudinary(avatarLocalFile);
+  const coverImage = await uploadToCloudinary(coverImageLocalFile);
 
-  if (!avatarUrl) {
-    throw new ApiError(500, 'Failed to upload avatar image');
+  if (!avatar) {
+    throw new ApiError(400, 'Failed to upload avatar image');
    }
 
   const user = await User.create({
@@ -52,8 +50,8 @@ const registerUser = asyncHandler(async (req, res) => {
     username: username.toLowerCase(),
     email,
     password,
-    avatar: avatarUrl.url,
-    coverImage: coverImageUrl?.url || "",
+    avatar: avatar.url,
+    coverImage: coverImage?.url || "",
   });
 
   const createdUser = await User.findById(user._id).select('-password -refreshToken');
@@ -63,7 +61,7 @@ const registerUser = asyncHandler(async (req, res) => {
   }
 
   return res.status(201).json(
-    new ApiResponse(201, createdUser,'User registered successfully!')
+    new ApiResponse(201, createdUser, 'User registered successfully!')
   );
 });
 
